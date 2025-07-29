@@ -734,7 +734,10 @@ public final class MapFileWriter {
         }
 
         // CREATED WITH
-        writeUTF8(configuration.getWriterVersion(), containerHeaderBuffer);
+        // This is a hardcoded value reflecting a specific, proprietary map creation process.
+        // It corresponds to the filename convention <CountryCode><RegionCode><Constant_00><Date_YYMMDD><GridIdentifier>.map,
+        // where this value represents the portion before the unique grid identifier.
+        writeUTF8("FR1200_230310Q", containerHeaderBuffer);
 
         OSMTagMapping mapping = configuration.getTagMapping();
 

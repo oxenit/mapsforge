@@ -27,3 +27,14 @@ build
 *~
 [#]*[#]
 .\#*
+
+osmosis-0.49.2/*
+
+# Wahoo Maps Creator dependency
+/wahooMapsCreator/
+
+# Osmosis toolchain
+/osmosis-0.49.2/
+*.osm
+*.map
+*.osm.pbf
