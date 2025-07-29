@@ -17,7 +17,20 @@ The target file for this process was `ile-de-france-latest.osm.pbf`. The referen
 Standard tools were insufficient for understanding the proprietary format's nuances. We developed two custom analysis scripts to perform a deep, byte-level inspection of the `.map` files:
 
 - **`map-detail-analyzer.py`**: A Python script for initial, fast, and flexible header parsing.
-- **`MapDetailAnalyzer.java`**: A more robust Java tool that leverages the Mapsforge library to read the file structure, including detailed sub-file (zoom level) information, tags, and all metadata fields.
+- **`MapDetailAnalyzer.java`**: A robust Java tool that leverages the Mapsforge library to read the file structure, including detailed sub-file (zoom level) information, tags, and all metadata fields.
+- **`DeepMapAnalyzer.java`**: Tile-level sampler that scans the map at runtime, lists available zoom levels, enumerates *all* tag/value pairs found on ways & POIs, and produces statistics (POI count, ways-with-names, unique text strings). Ideal for verifying real-world content after heavy filtering.
+
+**Usage examples**
+```bash
+# compile once (classpath must include the three mapsforge jars built via gradle)
+javac -cp "mapsforge-core.jar:mapsforge-map.jar:mapsforge-map-reader.jar" MapDetailAnalyzer.java DeepMapAnalyzer.java
+
+# header-level inspection
+java -cp "…:." MapDetailAnalyzer target.map
+
+# deep content scan (needs more RAM)
+java -Xmx1g -cp "…:." DeepMapAnalyzer target.map
+```
 
 These tools were crucial for comparing our generated files against the original, allowing us to iteratively refine the generation process.
 
@@ -97,3 +110,24 @@ The final generated map, `ile-de-france3.map`, was analyzed using our `MapDetail
 | **File Size**      | ~27.6 MB           | **31.8 MB**            | ☑️ **Excellent**  |
 
 The minor difference in file size is attributed to small variations in the geometry simplification algorithms between different versions of the map-writer plugin, but for all practical purposes, the replication was a success. 
+
+## Appendix B – Visualising Water-Source POIs on POI-less Firmware
+
+Some devices ignore the POI section completely.  To show drinking-water fountains you can transform each node into a tiny cross-shaped **way** that uses a tag already whitelisted (`natural=water`).  This survives the writer’s filtering and is rendered in blue.
+
+1. **Extract fountains / wells / springs**
+   ```bash
+   osmium tags-filter  base.osm.pbf \
+     n/amenity=drinking_water \
+     n/man_made=water_well \
+     n/natural=spring          \
+     -o water_points.osm
+   ```
+2. **Generate cross-geometry ways** – a small script takes each node, offsets ±8 m to build a cross polygon, tags it `natural=water name="Water source"`, assigns negative IDs, writes to `fake_water_crosses.osm`.
+3. **Merge** with the main dataset:
+   ```bash
+   osmium merge base.osm.pbf fake_water_crosses.osm -o merged.pbf
+   ```
+4. **Run MapFileWriter / Osmosis** on `merged.pbf` (no tag-mapping change needed).
+
+Each fountain now appears as a blue cross even though the POI block is still empty. 
